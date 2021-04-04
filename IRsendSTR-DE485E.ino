@@ -1,8 +1,6 @@
 /*
  *   control sony STR-DE485E receiver with Toshiba TV remote. (Well it could be any remote.)
  */
-#include "remote_codes.h"
-#include "irsend_debug.h"
 
 //#define SERIAL_PORT_ENABLE       1
 //#define IR_RECV_DEBUG            1
@@ -10,6 +8,9 @@
 //#define IR_PROC_DEBUG            1
 //#define INPUT_SELECTOR_DEBUG     1
 //#define DEBUG_ENABLE_ALL         1
+
+#include "remote_codes.h"
+#include "irsend_debug.h"
 
 #define SERIAL_BUFFER_LENGTH      128
 
@@ -94,9 +95,9 @@ void setup() {
   fdev_setup_stream(stdout, Serial_write, NULL, _FDEV_SETUP_WRITE);
   Serial.begin(115200);
   Serial.println();
-  Serial.println("---------------------------------------------------------");
-  Serial.println("  -- Ozzys remote translator for STR-DE485E receiver --  ");
-  Serial.println("---------------------------------------------------------");
+  Serial.println(F("---------------------------------------------------------"));
+  Serial.println(F("  -- Ozzys remote translator for STR-DE485E receiver --  "));
+  Serial.println(F("---------------------------------------------------------"));
   Serial.println();
   #endif
 
@@ -148,7 +149,7 @@ void discovery(int incr, int incaddr) {
 }
 
 void selftest() {
-  printf("Self test mode enabled. reset to exit\n");
+  Serial.println(F("Self test mode enabled. reset to exit"));
   while (true) {
      sendcode(BTN_VOLUME_UP, DEFAULT_NUM_BITS); 
      sendcode(BTN_VOLUME_DOWN, DEFAULT_NUM_BITS); 
@@ -165,7 +166,7 @@ void btToggle(uint8_t newValue) {
   
   #ifdef SERIAL_PORT_ENABLE
   Serial.print(F("bluetooth module enable pin setting to: "));
-  Serial.println(newValue == HIGH ? "HIGH": "LOW");
+  Serial.println(newValue == HIGH ? F("HIGH"): F("LOW"));
   #endif
   
   #ifdef DRIVER_OUT_PIN
@@ -194,8 +195,8 @@ void readAnalogValuesNoTimeout() {
 
   if (newMode != currMode) {
     #if defined(SERIAL_PORT_ENABLE) && defined(INPUT_SELECTOR_DEBUG)
-    Serial.print("Input selector mode: "); Serial.print(newMode, BIN);
-    Serial.print(" Previous mode: "); Serial.print(currMode, BIN);
+    Serial.print(F(" Input selector mode: ")); Serial.print(newMode, BIN);
+    Serial.print(F(" Previous mode: "));       Serial.print(currMode, BIN);
     Serial.println();
     #endif
     
@@ -248,23 +249,15 @@ void loop() {
       printf("Switch on string: '%s'\n", buffer);
       #endif
       switch(*buffer) {
-        case 'v':
-          discovery(+1,0); break;
-        case 'g':
-          discovery(-1,0); break;
-        case 't':
-          discovery(0, 0); break;
-        case '[':
-          discovery(0,-1); break;
-        case ']':
-          discovery(0,+1); break;
-        case 'l':
-          btToggle(!btToggleValue); break;
-        case 'q':
-          selftest();
+        case 'v':          discovery(+1,0); break;
+        case 'g':          discovery(-1,0); break;
+        case 't':          discovery(0, 0); break;
+        case '[':          discovery(0,-1); break;
+        case ']':          discovery(0,+1); break;
+        case 'l':          btToggle(!btToggleValue); break;
+        case 'q':          selftest();
         case 'x': {
-          if (nbits == 15) nbits = 12;
-          else if (nbits == 12) nbits = 15;
+          nbits = (nbits == 12) ? (nbits == 15 ? 20 : 15) : 12;
           printf("new format %d bit.\n", nbits);
         } break;
         case 'w': {
@@ -294,19 +287,19 @@ void loop() {
       buffer[length++] = c;
       if (length >= SERIAL_BUFFER_LENGTH) {
         #ifdef SERIAL_PORT_DEBUG
-        printf("Buffer full, reset.\n");
+        Serial.println(F("Buffer full, reset."));
         #endif
         length = 0;
       }
     }
   }
   #endif
-
+  
   if (IrReceiver.decode()) {
     uint16_t const cmd = IrReceiver.decodedIRData.command, adr = IrReceiver.decodedIRData.address;
     
     #if defined(SERIAL_PORT_ENABLE) && defined(IR_RECV_DEBUG)
-    printf("IR receiver received some shit! ");
+    Serial.print(F("IR receiver received some shit! "));
     printf(" command = %04X   ", cmd); printf(" address = %04X \n", adr);
     #endif
 
@@ -318,70 +311,70 @@ void loop() {
     switch (adr) {
       case 0x40: // Toshiba tv kumandasi
       switch (cmd) {
-        case 0x1A: code = BTN_VOLUME_UP;   break;
-        case 0x1E: code = BTN_VOLUME_DOWN; break;
+        case 0x1A: code = BTN_VOLUME_UP;            break;
+        case 0x1E: code = BTN_VOLUME_DOWN;          break;
       }
       break;
       case 0x10: // teledunya yarrak kablotv kumandasi
       switch (cmd) {
         // power mower
-        case 0x0A: code = BTN_POWER; break;    // POWER
-        case 0x44: code = BTN_MUTING; break;   // MUTE
+        case 0x0A: code = BTN_POWER;                break; // POWER
+        case 0x44: code = BTN_MUTING;               break; // MUTE
 
-        case 0x4A: btToggle(!btToggleValue); break; // V_FORMAT
-        case 0x24: code = BTN_SLEEP; break;         // SLEEP
-        case 0x5E: break;                           // Teletext
-        case 0x1E: code = BTN_TESTTONE; break;      // TV/Radio        
+        case 0x4A: btToggle(!btToggleValue);        break; // V_FORMAT
+        case 0x24: code = BTN_SLEEP;                break; // SLEEP
+        case 0x5E:                                  break; // Teletext
+        case 0x1E: code = BTN_TESTTONE;             break; // TV/Radio        
 
         // menu navigasyon
-        case 0x00: code = BTN_UP; break;
-        case 0x01: code = BTN_DOWN; break;
-        case 0x02: code = BTN_RIGHT; break;
-        case 0x03: code = BTN_LEFT; break;
-        case 0x1F: code = KEY_ENTER; break;     // OK
-        case 0x1A: code = BTN_AMP_MENU; break;  // MENU
-        case 0x09: code = BTN_AMP_MENU; break;  // EXIT
+        case 0x00: code = BTN_UP;                   break;
+        case 0x01: code = BTN_DOWN;                 break;
+        case 0x02: code = BTN_RIGHT;                break;
+        case 0x03: code = BTN_LEFT;                 break;
+        case 0x1F: code = KEY_ENTER;                break;  // OK
+        case 0x1A: code = BTN_AMP_MENU;             break;  // MENU
+        case 0x09: code = BTN_AMP_MENU;             break;  // EXIT
 
         // ses modu secme
-        case 0x05: code = BTN_MODE_UP; break;
-        case 0x07: code = BTN_MODE_DOWN; break;
+        case 0x05: code = BTN_MODE_UP;              break;
+        case 0x07: code = BTN_MODE_DOWN;            break;
 
         // preset ses modlari
-        case 0x46: code = BTN_2CH;                break;    //FAV
-        case 0x0C: code = BTN_AUTO_DEC;           break;    //GUIDE
-        case 0x04: code = BTN_ANALOG_DIRECT;      break;    //INFO
-        case 0x1C: code = BTN_MPX_DUAL;           break;    //checkmark
+        case 0x46: code = BTN_2CH;                  break; //FAV
+        case 0x0C: code = BTN_AUTO_DEC;             break; //GUIDE
+        case 0x04: code = BTN_ANALOG_DIRECT;        break; //INFO
+        case 0x1C: code = BTN_MPX_DUAL;             break; //checkmark
 
         // volume control
-        case 0x25: code = BTN_VOLUME_UP;          break;    // VOL+
-        case 0x27: code = BTN_VOLUME_DOWN;        break;    // VOL-
+        case 0x25: code = BTN_VOLUME_UP;            break; // VOL+
+        case 0x27: code = BTN_VOLUME_DOWN;          break; // VOL-
 
         // program control
-        case 0x21: code = BTN_CHANNEL_UP;          break;   // CH+
-        case 0x22: code = BTN_CHANNEL_DOWN;        break;   // CH-
+        case 0x21: code = BTN_CHANNEL_UP;           break; // CH+
+        case 0x22: code = BTN_CHANNEL_DOWN;         break; // CH-
 
         // numpad (niyeyse?)
-        case 0x11: code = KEY_1; break;
-        case 0x12: code = KEY_2; break;
-        case 0x13: code = KEY_3; break;
-        case 0x14: code = KEY_4; break;
-        case 0x15: code = KEY_5; break;
-        case 0x16: code = KEY_6; break;
-        case 0x17: code = KEY_7; break;
-        case 0x18: code = KEY_8; break;
-        case 0x19: code = KEY_9; break;
-        case 0x10: code = KEY_0; break;
-        case 0x43: break; // [*]
-        case 0x1D: break; // [#]
+        case 0x11: code = KEY_1;                    break;
+        case 0x12: code = KEY_2;                    break;
+        case 0x13: code = KEY_3;                    break;
+        case 0x14: code = KEY_4;                    break;
+        case 0x15: code = KEY_5;                    break;
+        case 0x16: code = KEY_6;                    break;
+        case 0x17: code = KEY_7;                    break;
+        case 0x18: code = KEY_8;                    break;
+        case 0x19: code = KEY_9;                    break;
+        case 0x10: code = KEY_0;                    break;
+        case 0x43:                                  break; // [*]
+        case 0x1D:                                  break; // [#]
 
         // source control
-        case 0x4D: code = BTN_VIDEO1;     break;//RED
-        case 0x0D: code = BTN_VIDEO2;     break;//GREEN
-        case 0x0E: code = BTN_DVD;        break;//YELLOW
-        case 0x0F: code = BTN_SA_CD;      break;//BLUE
+        case 0x4D: code = BTN_VIDEO1;               break;//RED
+        case 0x0D: code = BTN_VIDEO2;               break;//GREEN
+        case 0x0E: code = BTN_DVD;                  break;//YELLOW
+        case 0x0F: code = BTN_SA_CD;                break;//BLUE
 
-        case 0x42: code = BTN_MD_TAPE;    break;//PAUSE
-        case 0x4B: code = BTN_TUNER;      break;//ZOOM
+        case 0x42: code = BTN_MD_TAPE;              break;//PAUSE
+        case 0x4B: code = BTN_TUNER;                break;//ZOOM
       }
       break;
     }
@@ -390,12 +383,13 @@ void loop() {
     if (codeFound) {
       if (code != 0xFFFFFFFF) {
         printf(" Karsilik gelen sinyal = 0x%04X\n", code);
-      } else {   
+      } else {
         printf(" Bu tusa hicbir sik tanimlanmamis.\n"); 
       }
     }
     #endif
   }
+  
   if (codeFound) {
     sendcode(code, nbits);
   }
